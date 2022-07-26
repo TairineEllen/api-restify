@@ -2,6 +2,7 @@ const errors = require('restify-errors');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const auth = require('../auth');
+const jwt = require('jsonwebtoken');
 
 module.exports = server => {
   server.post('/register', (req, res, next) => {
@@ -25,11 +26,17 @@ module.exports = server => {
   });
 
   server.post('/auth', async (req, res, next) => {
-    const { email, password } = req.body;
+    const { email, password } = req.body;  
 
     try {
       const user = await auth.authenticate(email, password);
-      console.log(user);
+      const token = jwt.sign(user.toJSON(), process.env.JWT_SECRET, {
+        expiresIn: '15m'
+      });
+  
+      const { iat, exp } = jwt.decode(token);
+      res.send({ iat, exp, token });
+
       next();
     } catch (error) {
       return next(new errors.UnauthorizedError(error));
